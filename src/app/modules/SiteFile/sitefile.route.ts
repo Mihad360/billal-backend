@@ -1,31 +1,21 @@
 import express, { NextFunction, Request, Response } from "express";
 import auth from "../../middlewares/auth";
-import { siteControllers } from "./site.controller";
+import { siteFileControllers } from "./sitefile.controller";
 import { upload } from "../../utils/sendImageToCloudinary";
 
 const router = express.Router();
 
-router.get(
-  "/",
-  auth("admin", "office_admin", "worker"),
-  siteControllers.getSites,
-);
-router.get(
-  "/:siteId",
-  auth("admin", "office_admin", "worker"),
-  siteControllers.getEachSite,
-);
 router.post(
-  "/create",
+  "/upload",
   auth("office_admin"),
-  upload.array("images", 5),
+  upload.array("files", 5),
   (req: Request, res: Response, next: NextFunction) => {
     if (req.body.data) {
       req.body = JSON.parse(req.body.data);
     }
     next();
   },
-  siteControllers.addSite,
+  siteFileControllers.uploadFiles,
 );
 
-export const siteRoutes = router;
+export const siteFileRoutes = router;

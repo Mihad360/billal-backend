@@ -1,5 +1,5 @@
 import admin from "firebase-admin";
-import serviceAccount from "../../../../config/notification-test-ed116-firebase-adminsdk-fbsvc-94b8544fde.json";
+import serviceAccount from "../../../../config/notification-test-ed116-firebase-adminsdk-fbsvc-fa0f006e18.json";
 
 if (!admin.apps.length) {
   admin.initializeApp({

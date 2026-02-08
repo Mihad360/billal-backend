@@ -12,6 +12,19 @@ const ensureDirExists = (dirPath: string) => {
   }
 };
 
+export const getFileTypeCategory = (mimetype: string): string => {
+  if (mimetype.startsWith("image/")) return "image";
+  if (mimetype === "application/pdf") return "pdf";
+  if (
+    mimetype === "application/msword" ||
+    mimetype ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  )
+    return "document";
+  if (mimetype.startsWith("audio/")) return "audio";
+  return "other";
+};
+
 /**
  * Decide folder based on mime type
  */

@@ -1,8 +1,18 @@
+import { Types } from "mongoose";
+
 // Site Interface
 export interface ISite {
-  _id: string;
-  siteName: string;
+  _id?: Types.ObjectId;
+  createdBy: Types.ObjectId;
+  siteOwner: string;
   siteTitle: string;
+  buildingType:
+    | "Residential"
+    | "Commercial"
+    | "Industrial"
+    | "Mixed-Use"
+    | "Infrastructure"
+    | "Other";
   location: {
     address: string;
     coordinates: {
@@ -13,8 +23,7 @@ export interface ISite {
   status: "To-Do" | "In-Progress" | "Done";
   officeAdminRemarks?: string;
   completionDescription?: string;
-  completionPhotos?: string[];
-  createdBy: string;
+  photos?: string[];
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;

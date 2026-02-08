@@ -2,7 +2,7 @@ import { Schema, model } from "mongoose";
 import bcrypt from "bcrypt";
 import { IUser, UserInterface } from "./user.interface";
 
-const profileImageSchema = new Schema(
+export const profileImageSchema = new Schema(
   {
     path: {
       type: String,
@@ -32,7 +32,7 @@ const userSchema = new Schema<IUser, UserInterface>(
       type: String,
     },
     profileImage: {
-      type: profileImageSchema,
+      type: String,
     },
     role: {
       type: String,

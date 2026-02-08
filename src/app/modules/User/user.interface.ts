@@ -1,6 +1,6 @@
 import { Model, Types } from "mongoose";
 
-interface ProfileImage {
+export interface ProfileImage {
   path: string; // e.g., "images/1234567890-profile.jpg"
   url: string; // e.g., "http://localhost:5000/images/1234567890-profile.jpg"
 }
@@ -11,7 +11,7 @@ export interface IUser {
   password: string;
   name?: string;
   phoneNumber: string;
-  profileImage?: ProfileImage;
+  profileImage?: string;
   role: "office_admin" | "worker" | "admin";
   fcmToken?: string[];
   isActive?: boolean;
