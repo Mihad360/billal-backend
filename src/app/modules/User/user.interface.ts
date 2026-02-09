@@ -1,4 +1,5 @@
 import { Model, Types } from "mongoose";
+import { IUserSubscription } from "../Subscription/subscription.interface";
 
 export interface ProfileImage {
   path: string; // e.g., "images/1234567890-profile.jpg"
@@ -6,7 +7,7 @@ export interface ProfileImage {
 }
 
 export interface IUser {
-  _id?: Types.ObjectId; // roleId can either be populated (IRole) or an ObjectId reference
+  _id?: Types.ObjectId;
   email: string;
   password: string;
   name?: string;
@@ -18,6 +19,9 @@ export interface IUser {
   otp?: string;
   expiresAt?: Date;
   isVerified?: boolean;
+  // Subscription - just reference and status
+  currentSubscriptionId?: Types.ObjectId | IUserSubscription;
+  hasActiveSubscription?: boolean; // Simple true/false
   isDeleted?: boolean;
   passwordChangedAt?: Date;
   createdAt?: Date;

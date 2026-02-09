@@ -58,6 +58,15 @@ const userSchema = new Schema<IUser, UserInterface>(
       type: Boolean,
       default: false,
     },
+    currentSubscriptionId: {
+      type: Schema.Types.ObjectId,
+      ref: "UserSubscription",
+      default: null,
+    },
+    hasActiveSubscription: {
+      type: Boolean,
+      default: false,
+    },
     isDeleted: {
       type: Boolean,
       default: false,

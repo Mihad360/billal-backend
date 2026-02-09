@@ -6,6 +6,7 @@ import { TermsRoutes } from "../modules/Settings/Terms/Terms.route";
 import { PrivacyRoutes } from "../modules/Settings/privacy/Privacy.route";
 import { siteRoutes } from "../modules/Site/site.route";
 import { siteFileRoutes } from "../modules/SiteFile/sitefile.route";
+import { subscriptionRoutes } from "../modules/Subscription/subscription.route";
 
 const router = Router();
 
@@ -37,6 +38,10 @@ const moduleRoutes = [
   {
     path: "/site-file",
     route: siteFileRoutes,
+  },
+  {
+    path: "/subscription",
+    route: subscriptionRoutes,
   },
 ];
 
