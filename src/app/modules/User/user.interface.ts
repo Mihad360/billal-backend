@@ -8,20 +8,26 @@ export interface ProfileImage {
 
 export interface IUser {
   _id?: Types.ObjectId;
+  companyId: Types.ObjectId;
   email: string;
   password: string;
   name?: string;
   phoneNumber: string;
+  address?: string; //
   profileImage?: string;
   role: "office_admin" | "worker" | "admin";
+  experience?: number;
+  expertiseArea?: string;
+  employmentType?: "Full-time" | "Part-time" | "Contract";
   fcmToken?: string[];
+  // Auth / verification
   isActive?: boolean;
   otp?: string;
   expiresAt?: Date;
   isVerified?: boolean;
-  // Subscription - just reference and status
+  // Subscription (admin-related)
   currentSubscriptionId?: Types.ObjectId | IUserSubscription;
-  hasActiveSubscription?: boolean; // Simple true/false
+  hasActiveSubscription?: boolean;
   isDeleted?: boolean;
   passwordChangedAt?: Date;
   createdAt?: Date;

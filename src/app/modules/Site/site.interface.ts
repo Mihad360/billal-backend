@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 export interface ISite {
   _id?: Types.ObjectId;
   createdBy: Types.ObjectId;
+  companyId: Types.ObjectId;
   siteOwner: string;
   siteTitle: string;
   buildingType:
@@ -24,6 +25,7 @@ export interface ISite {
   officeAdminRemarks?: string;
   completionDescription?: string;
   photos?: string[];
+  endDate: Date;
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;

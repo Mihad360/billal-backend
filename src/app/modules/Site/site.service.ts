@@ -5,11 +5,26 @@ import AppError from "../../erros/AppError";
 import { sendFileToCloudinary } from "../../utils/sendImageToCloudinary";
 import { UserModel } from "../User/user.model";
 import QueryBuilder from "../../../builder/QueryBuilder";
+import { CompanyModel } from "../Company/company.model";
 
 const addSite = async (files: Express.Multer.File[], payload: ISite) => {
   const isOfficeAdminExist = await UserModel.findById(payload.createdBy);
   if (!isOfficeAdminExist) {
     throw new AppError(HttpStatus.NOT_FOUND, "Office admin not found");
+  }
+  const company = await CompanyModel.findById(isOfficeAdminExist.companyId);
+  if (!company) {
+    throw new AppError(HttpStatus.BAD_REQUEST, "company not found");
+  }
+  const endDate = new Date(payload.endDate);
+  const currentDate = new Date();
+
+  // Optional: Validate that endDate is in the future
+  if (endDate < currentDate) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      "Site deadline must be in the future",
+    );
   }
   // Handle photo uploads
   let photoUrls: string[] = [];
@@ -46,6 +61,7 @@ const addSite = async (files: Express.Multer.File[], payload: ISite) => {
   // Prepare site data
   const siteData: Partial<ISite> = {
     createdBy: isOfficeAdminExist._id,
+    companyId: company._id,
     siteOwner: payload.siteOwner.trim(),
     siteTitle: payload.siteTitle.trim(),
     buildingType: payload.buildingType,
@@ -57,6 +73,7 @@ const addSite = async (files: Express.Multer.File[], payload: ISite) => {
       },
     },
     status: payload.status || "To-Do",
+    endDate: endDate,
     photos: photoUrls,
   };
 

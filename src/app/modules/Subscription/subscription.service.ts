@@ -5,7 +5,7 @@ import {
   SubscriptionPlanModel,
   UserSubscriptionModel,
 } from "./subscription.model";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { JwtPayload } from "../../interface/global";
 import { ISubscriptionPlan } from "./subscription.interface";
 
@@ -152,6 +152,10 @@ const freeTrialPlan = async (user: JwtPayload) => {
   } finally {
     session.endSession();
   }
+};
+
+const buyPremiumPlan = async (planId: string, user: JwtPayload) => {
+  const userId = new Types.ObjectId(user.user);
 };
 
 export const subscriptionServices = {

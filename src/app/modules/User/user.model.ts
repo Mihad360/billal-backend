@@ -16,6 +16,7 @@ export const profileImageSchema = new Schema(
 
 const userSchema = new Schema<IUser, UserInterface>(
   {
+    companyId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
     email: {
       type: String,
       required: true,
@@ -27,20 +28,41 @@ const userSchema = new Schema<IUser, UserInterface>(
     },
     name: {
       type: String,
+      default: null,
     },
     phoneNumber: {
       type: String,
+      default: null,
+    },
+    address: {
+      type: String,
+      default: null,
     },
     profileImage: {
       type: String,
+      default: null,
     },
     role: {
       type: String,
       enum: ["office_admin", "worker", "admin"],
       default: "worker",
     },
+    experience: {
+      type: Number,
+      default: 0,
+    },
+    expertiseArea: {
+      type: String,
+      default: null,
+    },
+    employmentType: {
+      type: String,
+      enum: ["Full-time", "Part-time", "Contract"],
+      default: "Full-time",
+    },
     fcmToken: {
       type: [String],
+      default: [],
     },
     isActive: {
       type: Boolean,

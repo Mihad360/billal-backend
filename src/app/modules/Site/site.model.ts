@@ -6,6 +6,11 @@ const SiteSchema = new Schema<ISite>(
     createdBy: {
       type: Schema.Types.ObjectId,
       required: true,
+      ref: "User",
+    },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
     },
     siteOwner: {
       type: String,
@@ -63,6 +68,10 @@ const SiteSchema = new Schema<ISite>(
       type: [String],
       default: [],
     },
+    endDate: {
+      type: Date,
+      required: true, // Make it required if every site must have a deadline
+    },
     completedAt: {
       type: Date,
     },
@@ -74,9 +83,5 @@ const SiteSchema = new Schema<ISite>(
 
 // Index for geospatial queries (optional but recommended)
 SiteSchema.index({ "location.coordinates": "2dsphere" });
-
-// Index for common queries
-SiteSchema.index({ status: 1, createdAt: -1 });
-SiteSchema.index({ createdBy: 1 });
 
 export const SiteModel = model<ISite>("Site", SiteSchema);

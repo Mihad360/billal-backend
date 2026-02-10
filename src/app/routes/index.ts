@@ -7,6 +7,8 @@ import { PrivacyRoutes } from "../modules/Settings/privacy/Privacy.route";
 import { siteRoutes } from "../modules/Site/site.route";
 import { siteFileRoutes } from "../modules/SiteFile/sitefile.route";
 import { subscriptionRoutes } from "../modules/Subscription/subscription.route";
+import { companyRoutes } from "../modules/Company/company.route";
+import { officeAdminRoutes } from "../modules/OfficeAdmin/officeadmin.route";
 
 const router = Router();
 
@@ -32,6 +34,10 @@ const moduleRoutes = [
     route: PrivacyRoutes,
   },
   {
+    path: "/company",
+    route: companyRoutes,
+  },
+  {
     path: "/site",
     route: siteRoutes,
   },
@@ -42,6 +48,10 @@ const moduleRoutes = [
   {
     path: "/subscription",
     route: subscriptionRoutes,
+  },
+  {
+    path: "/office-admin",
+    route: officeAdminRoutes,
   },
 ];
 
