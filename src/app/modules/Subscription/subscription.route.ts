@@ -10,5 +10,10 @@ router.post(
   subscriptionControllers.freeTrialPlan,
 );
 router.post("/create", subscriptionControllers.createSubscriptionPlan);
+router.post(
+  "/premium-plan/:planId",
+  auth("office_admin"),
+  subscriptionControllers.buyPremiumPlan,
+);
 
 export const subscriptionRoutes = router;

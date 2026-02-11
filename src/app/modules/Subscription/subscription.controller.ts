@@ -28,7 +28,23 @@ const createSubscriptionPlan = catchAsync(async (req, res) => {
   });
 });
 
+const buyPremiumPlan = catchAsync(async (req, res) => {
+  const id = req.params.planId;
+  const result = await subscriptionServices.buyPremiumPlan(
+    id,
+    req.user as JwtPayload,
+  );
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    data: result,
+  });
+});
+
 export const subscriptionControllers = {
   freeTrialPlan,
   createSubscriptionPlan,
+  buyPremiumPlan,
 };

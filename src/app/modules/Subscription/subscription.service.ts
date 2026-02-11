@@ -156,9 +156,125 @@ const freeTrialPlan = async (user: JwtPayload) => {
 
 const buyPremiumPlan = async (planId: string, user: JwtPayload) => {
   const userId = new Types.ObjectId(user.user);
+
+  /* ------------------ Find the subscription plan ------------------ */
+  const plan = await SubscriptionPlanModel.findById(planId);
+  if (!plan) {
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      "Subscription plan not found or inactive",
+    );
+  }
+
+  /* ------------------ Check if user exists ------------------ */
+  const isUserExist = await UserModel.findById(userId);
+  if (!isUserExist) {
+    throw new AppError(HttpStatus.NOT_FOUND, "User not found");
+  }
+
+  /* ------------------ Check if user already has active subscription ------------------ */
+  if (isUserExist.hasActiveSubscription) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      "You already have an active subscription. Please cancel or wait for it to expire.",
+    );
+  }
+
+  /* ------------------ Start transaction ------------------ */
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    /* ------------------ Create premium subscription ------------------ */
+    const subscriptionStartDate = new Date();
+    const subscriptionEndDate = new Date(
+      subscriptionStartDate.getTime() + plan.duration * 24 * 60 * 60 * 1000,
+    );
+
+    const premiumSubscription = await UserSubscriptionModel.create(
+      [
+        {
+          userId: userId,
+          planId: plan._id,
+          subscriptionType: "paid",
+          status: "active",
+          startDate: subscriptionStartDate,
+          endDate: subscriptionEndDate,
+          amount: plan.price,
+          maxProjects: 100, // Adjust based on your premium limits
+          maxMembers: 100, // Adjust based on your premium limits
+          storageLimit: 500, // Adjust based on your premium limits
+          autoRenew: false,
+        },
+      ],
+      { session },
+    );
+
+    if (!premiumSubscription || premiumSubscription.length === 0) {
+      throw new AppError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "Failed to activate premium subscription",
+      );
+    }
+
+    /* ------------------ Update user with subscription ------------------ */
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      {
+        currentSubscriptionId: premiumSubscription[0]._id,
+        hasActiveSubscription: true,
+      },
+      { session, new: true },
+    ).select("-password -otp");
+
+    if (!updatedUser) {
+      throw new AppError(HttpStatus.BAD_REQUEST, "User update failed");
+    }
+
+    /* ------------------ Commit transaction ------------------ */
+    await session.commitTransaction();
+
+    /* ------------------ Return response ------------------ */
+    const daysRemaining = Math.ceil(
+      (subscriptionEndDate.getTime() - subscriptionStartDate.getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+
+    return {
+      user: {
+        _id: updatedUser._id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        hasActiveSubscription: updatedUser.hasActiveSubscription,
+      },
+      subscription: {
+        type: "premium",
+        planName: plan.name,
+        status: "active",
+        startDate: subscriptionStartDate,
+        endDate: subscriptionEndDate,
+        daysRemaining,
+        amount: plan.price,
+        limits: {
+          maxProjects: 100,
+          maxMembers: 100,
+          storageLimit: 500,
+        },
+      },
+      message: `${plan.name} premium plan activated successfully!`,
+    };
+  } catch (error) {
+    /* ------------------ Rollback on error ------------------ */
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
 };
 
 export const subscriptionServices = {
   createSubscriptionPlan,
   freeTrialPlan,
+  buyPremiumPlan,
 };
