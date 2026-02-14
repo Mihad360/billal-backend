@@ -70,7 +70,6 @@ const SiteSchema = new Schema<ISite>(
     },
     endDate: {
       type: Date,
-      required: true, // Make it required if every site must have a deadline
     },
     completedAt: {
       type: Date,

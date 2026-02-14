@@ -5,6 +5,11 @@ import { upload } from "../../utils/sendImageToCloudinary";
 
 const router = express.Router();
 
+router.get(
+  "/:siteId",
+  auth("office_admin", "worker"),
+  siteFileControllers.getSiteFiles,
+);
 router.post(
   "/upload",
   auth("office_admin"),

@@ -6,6 +6,8 @@ import { sendFileToCloudinary } from "../../utils/sendImageToCloudinary";
 import { UserModel } from "../User/user.model";
 import QueryBuilder from "../../../builder/QueryBuilder";
 import { CompanyModel } from "../Company/company.model";
+import { JwtPayload } from "../../interface/global";
+import { SiteAssignmentModel } from "../SiteAssignment/siteassignment.model";
 
 const addSite = async (files: Express.Multer.File[], payload: ISite) => {
   const isOfficeAdminExist = await UserModel.findById(payload.createdBy);
@@ -82,15 +84,52 @@ const addSite = async (files: Express.Multer.File[], payload: ISite) => {
   return newSite;
 };
 
-const getSites = async (query: Record<string, unknown>) => {
-  const siteQuery = new QueryBuilder(SiteModel.find(), query)
-    .filter()
-    .fields()
-    .paginate();
+const getSites = async (user: JwtPayload, query: Record<string, unknown>) => {
+  const isUserExist = await UserModel.findById(user.user);
 
-  const meta = await siteQuery.countTotal();
-  const result = await siteQuery.modelQuery;
-  return { meta, result };
+  if (!isUserExist) {
+    throw new AppError(HttpStatus.NOT_FOUND, "User not found");
+  }
+
+  // ✅ OFFICE ADMIN
+  if (isUserExist.role === "office_admin") {
+    const siteQuery = new QueryBuilder(
+      SiteModel.find({ createdBy: isUserExist._id }),
+      query,
+    )
+      .filter()
+      .fields()
+      .paginate();
+
+    const meta = await siteQuery.countTotal();
+    const result = await siteQuery.modelQuery;
+
+    return { meta, result };
+  }
+
+  // ✅ WORKER
+  if (isUserExist.role === "worker") {
+    const assignmentQuery = new QueryBuilder(
+      SiteAssignmentModel.find({
+        workerId: isUserExist._id,
+        isActive: true,
+      }).populate("siteId"),
+      query,
+    )
+      .filter()
+      .fields()
+      .paginate();
+
+    const meta = await assignmentQuery.countTotal();
+    const result = await assignmentQuery.modelQuery;
+
+    // Extract only site data
+    // const result = assignments.map((assignment) => assignment.siteId);
+
+    return { meta, result };
+  }
+
+  throw new AppError(HttpStatus.FORBIDDEN, "Unauthorized access");
 };
 
 const getEachSite = async (id: string) => {

@@ -8,6 +8,6 @@ export interface ISiteFile {
   fileName: string;
   fileType: "pdf" | "image" | "document" | "other";
   fileUrl: string;
-  fileSize?: number;
+  fileSize?: string;
   uploadedAt: Date;
 }

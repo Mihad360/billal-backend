@@ -9,6 +9,9 @@ import { SiteModel } from "../Site/site.model";
 import { getFileTypeCategory } from "../../utils/multer";
 import { sendFileToCloudinary } from "../../utils/sendImageToCloudinary";
 import { SiteFileModel } from "./sitefile.model";
+import { formatFileSize } from "./sitefile.utils";
+import QueryBuilder from "../../../builder/QueryBuilder";
+import { SiteAssignmentModel } from "../SiteAssignment/siteassignment.model";
 
 const uploadFiles = async (
   user: JwtPayload,
@@ -90,7 +93,7 @@ const uploadFiles = async (
     fileName: payload.fileName,
     fileType: result.fileType,
     fileUrl: result.fileUrl,
-    fileSize: result.fileSize,
+    fileSize: formatFileSize(result.fileSize),
   }));
 
   try {
@@ -105,6 +108,60 @@ const uploadFiles = async (
   }
 };
 
+const getSiteFiles = async (
+  user: JwtPayload,
+  siteId: string,
+  query: Record<string, unknown>,
+) => {
+  const isUserExist = await UserModel.findById(user.user);
+
+  if (!isUserExist) {
+    throw new AppError(HttpStatus.NOT_FOUND, "User not found");
+  }
+
+  const siteObjectId = new Types.ObjectId(siteId);
+
+  // ✅ OFFICE ADMIN
+  if (isUserExist.role === "office_admin") {
+    const fileQuery = new QueryBuilder(
+      SiteFileModel.find({
+        siteId: siteObjectId,
+      }),
+      query,
+    )
+      .filter()
+      .fields()
+      .paginate();
+
+    const meta = await fileQuery.countTotal();
+    const result = await fileQuery.modelQuery;
+
+    return { meta, result };
+  }
+
+  // ✅ WORKER
+  if (isUserExist.role === "worker") {
+    const assignmentQuery = new QueryBuilder(
+      SiteAssignmentModel.find({
+        workerId: isUserExist._id,
+        siteId: siteObjectId,
+        isActive: true,
+      }).populate("fileId"),
+      query,
+    )
+      .filter()
+      .fields()
+      .paginate();
+
+    const meta = await assignmentQuery.countTotal();
+    const result = await assignmentQuery.modelQuery;
+    return { meta, result };
+  }
+
+  throw new AppError(HttpStatus.FORBIDDEN, "Unauthorized access");
+};
+
 export const siteFileServices = {
   uploadFiles,
+  getSiteFiles,
 };

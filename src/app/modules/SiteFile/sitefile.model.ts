@@ -26,7 +26,7 @@ const SiteFileSchema = new Schema(
       required: true,
     },
     fileSize: {
-      type: Number, // in bytes
+      type: String, // in bytes
     },
   },
   {

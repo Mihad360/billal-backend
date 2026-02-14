@@ -20,6 +20,24 @@ const uploadFiles = catchAsync(async (req, res) => {
   });
 });
 
+const getSiteFiles = catchAsync(async (req, res) => {
+  const siteId = req.params.siteId;
+  const result = await siteFileServices.getSiteFiles(
+    req.user as JwtPayload,
+    siteId,
+    req.query,
+  );
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    meta: result.meta,
+    data: result.result,
+  });
+});
+
 export const siteFileControllers = {
   uploadFiles,
+  getSiteFiles,
 };

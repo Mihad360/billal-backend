@@ -2,6 +2,7 @@ import HttpStatus from "http-status";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { siteServices } from "./site.service";
+import { JwtPayload } from "../../interface/global";
 
 const addSite = catchAsync(async (req, res) => {
   const files = req.files as Express.Multer.File[];
@@ -16,7 +17,8 @@ const addSite = catchAsync(async (req, res) => {
 });
 
 const getSites = catchAsync(async (req, res) => {
-  const result = await siteServices.getSites(req.query);
+  const user = req.user as JwtPayload;
+  const result = await siteServices.getSites(user, req.query);
 
   sendResponse(res, {
     statusCode: HttpStatus.OK,
