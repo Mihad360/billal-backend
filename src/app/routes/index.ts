@@ -9,7 +9,7 @@ import { siteFileRoutes } from "../modules/SiteFile/sitefile.route";
 import { subscriptionRoutes } from "../modules/Subscription/subscription.route";
 import { companyRoutes } from "../modules/Company/company.route";
 import { officeAdminRoutes } from "../modules/OfficeAdmin/officeadmin.route";
-import { siteAssignmentRoutes } from "../modules/SiteAssignment/siteassignment.route";
+import { taskRoutes } from "../modules/SiteTask/task.route";
 
 const router = Router();
 
@@ -55,8 +55,8 @@ const moduleRoutes = [
     route: officeAdminRoutes,
   },
   {
-    path: "/assign",
-    route: siteAssignmentRoutes,
+    path: "/task",
+    route: taskRoutes,
   },
 ];
 

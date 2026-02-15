@@ -11,7 +11,7 @@ import { sendFileToCloudinary } from "../../utils/sendImageToCloudinary";
 import { SiteFileModel } from "./sitefile.model";
 import { formatFileSize } from "./sitefile.utils";
 import QueryBuilder from "../../../builder/QueryBuilder";
-import { SiteAssignmentModel } from "../SiteAssignment/siteassignment.model";
+import { SiteTaskModel } from "../SiteTask/task.model";
 
 const uploadFiles = async (
   user: JwtPayload,
@@ -141,20 +141,26 @@ const getSiteFiles = async (
 
   // ✅ WORKER
   if (isUserExist.role === "worker") {
-    const assignmentQuery = new QueryBuilder(
-      SiteAssignmentModel.find({
-        workerId: isUserExist._id,
-        siteId: siteObjectId,
-        isActive: true,
-      }).populate("fileId"),
+    const assignedTasks = await SiteTaskModel.find({
+      assignedTo: isUserExist._id,
+      siteId: siteObjectId,
+    });
+
+    const fileIds = assignedTasks.map((task) => task.fileId);
+
+    const fileQuery = new QueryBuilder(
+      SiteFileModel.find({
+        _id: { $in: fileIds },
+      }),
       query,
     )
       .filter()
       .fields()
       .paginate();
 
-    const meta = await assignmentQuery.countTotal();
-    const result = await assignmentQuery.modelQuery;
+    const meta = await fileQuery.countTotal();
+    const result = await fileQuery.modelQuery;
+
     return { meta, result };
   }
 

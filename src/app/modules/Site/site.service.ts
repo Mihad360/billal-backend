@@ -7,7 +7,7 @@ import { UserModel } from "../User/user.model";
 import QueryBuilder from "../../../builder/QueryBuilder";
 import { CompanyModel } from "../Company/company.model";
 import { JwtPayload } from "../../interface/global";
-import { SiteAssignmentModel } from "../SiteAssignment/siteassignment.model";
+import { SiteTaskModel } from "../SiteTask/task.model";
 
 const addSite = async (files: Express.Multer.File[], payload: ISite) => {
   const isOfficeAdminExist = await UserModel.findById(payload.createdBy);
@@ -107,24 +107,23 @@ const getSites = async (user: JwtPayload, query: Record<string, unknown>) => {
     return { meta, result };
   }
 
-  // ✅ WORKER
   if (isUserExist.role === "worker") {
-    const assignmentQuery = new QueryBuilder(
-      SiteAssignmentModel.find({
-        workerId: isUserExist._id,
-        isActive: true,
-      }).populate("siteId"),
+    const siteIds = await SiteTaskModel.find({
+      assignedTo: isUserExist._id,
+    }).distinct("siteId");
+
+    const siteQuery = new QueryBuilder(
+      SiteModel.find({
+        _id: { $in: siteIds },
+      }),
       query,
     )
       .filter()
       .fields()
       .paginate();
 
-    const meta = await assignmentQuery.countTotal();
-    const result = await assignmentQuery.modelQuery;
-
-    // Extract only site data
-    // const result = assignments.map((assignment) => assignment.siteId);
+    const meta = await siteQuery.countTotal();
+    const result = await siteQuery.modelQuery;
 
     return { meta, result };
   }
