@@ -29,4 +29,5 @@ export interface ISite {
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
+  isDeleted: boolean;
 }

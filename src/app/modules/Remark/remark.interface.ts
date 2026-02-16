@@ -2,20 +2,28 @@ import { Types } from "mongoose";
 
 export interface ISiteTaskRemark {
   _id?: Types.ObjectId;
-  taskId: Types.ObjectId; // Which task this remark is for
-  siteId: Types.ObjectId; // For easier querying
+  taskId: Types.ObjectId; // One remark per task
+  siteId: Types.ObjectId;
   fileId: Types.ObjectId;
 
-  // Who made the remark
-  createdBy: Types.ObjectId;
-  userRole: "office_admin" | "worker"; // To quickly identify who remarked
+  // Last person who remarked
+  lastRemarkedBy: Types.ObjectId;
+  lastRemarkedRole: "office_admin" | "worker";
+  lastRemarkedAt: Date;
 
-  // Remark content
+  // Current remark content (gets replaced each time)
   description: string;
-  images?: string[]; // Worker/Admin can attach images
+  images?: string[]; // Latest images
 
-  // If this remark changes task status
-  status?: "To-Do" | "In-Progress" | "Done" | "Remark";
+  // Remark history (so you can see conversation)
+  history?: Array<{
+    remarkedBy: Types.ObjectId;
+    userRole: "office_admin" | "worker";
+    description: string;
+    images?: string[];
+    remarkedAt: Date;
+    statusAtTime?: string; // What status was when this remark was added
+  }>;
 
   createdAt: Date;
   updatedAt: Date;

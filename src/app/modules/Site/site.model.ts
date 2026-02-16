@@ -74,6 +74,10 @@ const SiteSchema = new Schema<ISite>(
     completedAt: {
       type: Date,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt

@@ -28,6 +28,10 @@ const SiteFileSchema = new Schema(
     fileSize: {
       type: String, // in bytes
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

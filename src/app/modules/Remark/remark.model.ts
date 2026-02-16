@@ -1,23 +1,9 @@
 import { Schema, model } from "mongoose";
 import { ISiteTaskRemark } from "./remark.interface";
 
-const SiteTaskRemarkSchema = new Schema<ISiteTaskRemark>(
+const remarkHistorySchema = new Schema(
   {
-    taskId: {
-      type: Schema.Types.ObjectId,
-      ref: "SiteTask",
-      required: true,
-    },
-    siteId: {
-      type: Schema.Types.ObjectId,
-      ref: "Site",
-      required: true,
-    },
-    fileId: {
-      type: Schema.Types.ObjectId,
-      ref: "SiteFile",
-    },
-    createdBy: {
+    remarkedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -36,17 +22,64 @@ const SiteTaskRemarkSchema = new Schema<ISiteTaskRemark>(
       type: [String],
       default: [],
     },
-    status: {
+    remarkedAt: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
+    statusAtTime: {
       type: String,
-      enum: ["To-Do", "In-Progress", "Done", "Remark"],
+    },
+  },
+  { _id: false },
+);
+
+const siteTaskRemarkSchema = new Schema<ISiteTaskRemark>(
+  {
+    taskId: {
+      type: Schema.Types.ObjectId,
+      ref: "SiteTask",
+    },
+    siteId: {
+      type: Schema.Types.ObjectId,
+      ref: "Site",
+    },
+    fileId: {
+      type: Schema.Types.ObjectId,
+      ref: "SiteFile",
+    },
+    lastRemarkedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    lastRemarkedRole: {
+      type: String,
+      enum: ["office_admin", "worker"],
+    },
+    lastRemarkedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    images: {
+      type: [String],
+      default: [],
+    },
+    history: {
+      type: [remarkHistorySchema],
+      default: [],
     },
   },
   {
-    timestamps: true,
+    timestamps: true, // ✅ adds createdAt & updatedAt automatically
   },
 );
 
-export const SiteTaskRemark = model<ISiteTaskRemark>(
-  "Remark",
-  SiteTaskRemarkSchema,
+export const SiteTaskRemarkModel = model<ISiteTaskRemark>(
+  "SiteTaskRemark",
+  siteTaskRemarkSchema,
 );

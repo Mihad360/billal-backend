@@ -33,4 +33,5 @@ export interface ISiteTask {
 
   createdAt: Date;
   updatedAt: Date;
+  isDeleted: boolean;
 }

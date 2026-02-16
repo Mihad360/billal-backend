@@ -10,6 +10,8 @@ import { subscriptionRoutes } from "../modules/Subscription/subscription.route";
 import { companyRoutes } from "../modules/Company/company.route";
 import { officeAdminRoutes } from "../modules/OfficeAdmin/officeadmin.route";
 import { taskRoutes } from "../modules/SiteTask/task.route";
+import { remarkRoutes } from "../modules/Remark/remark.route";
+import { commentRoutes } from "../modules/Comment/comment.route";
 
 const router = Router();
 
@@ -57,6 +59,14 @@ const moduleRoutes = [
   {
     path: "/task",
     route: taskRoutes,
+  },
+  {
+    path: "/remark",
+    route: remarkRoutes,
+  },
+  {
+    path: "/comment",
+    route: commentRoutes,
   },
 ];
 

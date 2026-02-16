@@ -73,6 +73,10 @@ const SiteTaskSchema = new Schema<ISiteTask>(
       type: [String],
       default: [],
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

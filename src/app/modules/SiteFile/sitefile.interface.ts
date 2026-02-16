@@ -10,4 +10,5 @@ export interface ISiteFile {
   fileUrl: string;
   fileSize?: string;
   uploadedAt: Date;
+  isDeleted: boolean;
 }
