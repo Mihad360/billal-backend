@@ -8,6 +8,10 @@ import {
 import mongoose, { Types } from "mongoose";
 import { JwtPayload } from "../../interface/global";
 import { ISubscriptionPlan } from "./subscription.interface";
+import {
+  confirmPayment,
+  createPaymentIntent,
+} from "../Payment/payment.service";
 
 const createSubscriptionPlan = async (payload: ISubscriptionPlan) => {
   /* ------------------ Check if plan already exists ------------------ */
@@ -154,10 +158,14 @@ const freeTrialPlan = async (user: JwtPayload) => {
   }
 };
 
-const buyPremiumPlan = async (planId: string, user: JwtPayload) => {
+const createPayment = async (planId: string, user: JwtPayload) => {
   const userId = new Types.ObjectId(user.user);
 
-  /* ------------------ Find the subscription plan ------------------ */
+  const isUserExist = await UserModel.findById(userId);
+  if (!isUserExist) {
+    throw new AppError(HttpStatus.NOT_FOUND, "User not found");
+  }
+
   const plan = await SubscriptionPlanModel.findById(planId);
   if (!plan) {
     throw new AppError(
@@ -166,31 +174,64 @@ const buyPremiumPlan = async (planId: string, user: JwtPayload) => {
     );
   }
 
-  /* ------------------ Check if user exists ------------------ */
-  const isUserExist = await UserModel.findById(userId);
-  if (!isUserExist) {
-    throw new AppError(HttpStatus.NOT_FOUND, "User not found");
-  }
-
-  /* ------------------ Check if user already has active subscription ------------------ */
   if (isUserExist.hasActiveSubscription) {
     throw new AppError(
       HttpStatus.BAD_REQUEST,
-      "You already have an active subscription. Please cancel or wait for it to expire.",
+      "You already have an active subscription.",
     );
   }
 
-  /* ------------------ Start transaction ------------------ */
+  // Step 1: Create payment intent
+  const { paymentIntentId } = await createPaymentIntent(
+    isUserExist._id,
+    plan._id,
+  );
+
+  // Step 2: Confirm it
+  const confirmedIntent = await confirmPayment(paymentIntentId);
+
+  if (confirmedIntent.status !== "succeeded") {
+    throw new AppError(HttpStatus.BAD_REQUEST, "Payment did not succeed");
+  }
+
+  // Step 3: Activate subscription ONCE — right here, nowhere else
+  const result = await buyPremiumPlan(
+    planId,
+    userId.toString(),
+    confirmedIntent.status,
+  );
+
+  // TO SWITCH TO PRODUCTION:
+  //  *   1. Remove confirmPayment() call below
+  //  *   2. Remove buyPremiumPlan() call below
+  //  *   3. Return clientSecret to frontend instead of subscription data
+  //  *   4. Uncomment buyPremiumPlan() inside stripeWebhookHandler
+  //  *   5. Make sure STRIPE_WEBHOOK_SECRET is set from Stripe dashboard
+  //  *      (stripe listen --forward-to localhost:5000/webhook for local test)
+
+  return result;
+};
+
+export const buyPremiumPlan = async (
+  planId: string,
+  userId: string,
+  status: string,
+) => {
+  const plan = await SubscriptionPlanModel.findById(planId);
+  if (!plan) {
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      "Subscription plan not found or inactive",
+    );
+  }
   const session = await mongoose.startSession();
   session.startTransaction();
-
   try {
     /* ------------------ Create premium subscription ------------------ */
     const subscriptionStartDate = new Date();
     const subscriptionEndDate = new Date(
       subscriptionStartDate.getTime() + plan.duration * 24 * 60 * 60 * 1000,
     );
-
     const premiumSubscription = await UserSubscriptionModel.create(
       [
         {
@@ -209,14 +250,12 @@ const buyPremiumPlan = async (planId: string, user: JwtPayload) => {
       ],
       { session },
     );
-
-    if (!premiumSubscription || premiumSubscription.length === 0) {
+    if (!premiumSubscription.length) {
       throw new AppError(
         HttpStatus.INTERNAL_SERVER_ERROR,
         "Failed to activate premium subscription",
       );
     }
-
     /* ------------------ Update user with subscription ------------------ */
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
@@ -226,21 +265,18 @@ const buyPremiumPlan = async (planId: string, user: JwtPayload) => {
       },
       { session, new: true },
     ).select("-password -otp");
-
     if (!updatedUser) {
       throw new AppError(HttpStatus.BAD_REQUEST, "User update failed");
     }
-
     /* ------------------ Commit transaction ------------------ */
     await session.commitTransaction();
-
     /* ------------------ Return response ------------------ */
     const daysRemaining = Math.ceil(
       (subscriptionEndDate.getTime() - subscriptionStartDate.getTime()) /
         (1000 * 60 * 60 * 24),
     );
-
     return {
+      status: status,
       user: {
         _id: updatedUser._id,
         email: updatedUser.email,
@@ -276,5 +312,5 @@ const buyPremiumPlan = async (planId: string, user: JwtPayload) => {
 export const subscriptionServices = {
   createSubscriptionPlan,
   freeTrialPlan,
-  buyPremiumPlan,
+  createPayment,
 };

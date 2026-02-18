@@ -11,9 +11,9 @@ router.post(
 );
 router.post("/create", subscriptionControllers.createSubscriptionPlan);
 router.post(
-  "/premium-plan/:planId",
+  "/create-payment/:planId",
   auth("office_admin"),
-  subscriptionControllers.buyPremiumPlan,
+  subscriptionControllers.createPayment,
 );
 
 export const subscriptionRoutes = router;

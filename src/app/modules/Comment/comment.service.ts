@@ -130,7 +130,7 @@ const getCommentsByTaskId = async (taskId: string) => {
   }
 
   const comments = await SiteTaskCommentModel.find({ taskId })
-    .populate("commentedBy", "name email role")
+    .populate("commentedBy", "name email role profileImage")
     .sort({ createdAt: 1 }); // Oldest first (chronological like chat)
 
   return comments;

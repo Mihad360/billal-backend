@@ -23,5 +23,10 @@ router.post(
   },
   taskControllers.assignTask,
 );
+router.patch(
+  "/status/:taskId",
+  auth("worker", "office_admin"),
+  taskControllers.updateTaskStatus,
+);
 
 export const taskRoutes = router;

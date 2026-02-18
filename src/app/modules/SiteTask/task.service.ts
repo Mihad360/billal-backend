@@ -128,8 +128,34 @@ const getEachTask = async (taskId: string) => {
   return result;
 };
 
+const updateTaskStatus = async (
+  payload: { status: "To-Do" | "In-Progress" | "Done" | "Remark" },
+  taskId: string,
+) => {
+  const { status } = payload;
+  const validStatuses = ["To-Do", "In-Progress", "Done", "Remark"];
+  if (!validStatuses.includes(status)) {
+    throw new AppError(HttpStatus.BAD_REQUEST, "Invalid status");
+  }
+  const updated = await SiteTaskModel.findOneAndUpdate(
+    { _id: taskId },
+    {
+      $set: {
+        status,
+        ...(status === "Done" && { completedAt: new Date() }),
+      },
+    },
+    { new: true },
+  );
+  if (!updated) {
+    throw new AppError(HttpStatus.BAD_REQUEST, "Status update failed");
+  }
+  return { status: updated.status };
+};
+
 export const taskServices = {
   assignTask,
   getMyTasks,
   getEachTask,
+  updateTaskStatus,
 };

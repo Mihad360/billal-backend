@@ -29,6 +29,9 @@ const config = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
 
   LOCAL_URL: process.env.LOCAL_URL,
+
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
 } as const;
 
 export default config;

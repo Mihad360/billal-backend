@@ -8,7 +8,15 @@ import path from "path";
 import { template } from "./rootTemplate";
 import { privacyControllers } from "./app/modules/Settings/privacy/Privacy.controller";
 import { logHttpRequests } from "./logger/logger";
+import bodyParser from "body-parser";
+import { stripeWebhookHandler } from "./app/utils/stripe/stripeWebhookHandler";
 const app: Application = express();
+
+app.post(
+  "/stripe/webhook",
+  bodyParser.raw({ type: "application/json" }),
+  stripeWebhookHandler,
+);
 
 app.use(logHttpRequests);
 app.use(express.json());

@@ -80,6 +80,10 @@ const userSchema = new Schema<IUser, UserInterface>(
       type: Boolean,
       default: false,
     },
+    isCompanyAdded: {
+      type: Boolean,
+      default: false,
+    },
     currentSubscriptionId: {
       type: Schema.Types.ObjectId,
       ref: "UserSubscription",

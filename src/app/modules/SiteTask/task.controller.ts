@@ -49,8 +49,21 @@ const getEachTask = catchAsync(async (req, res) => {
   });
 });
 
+const updateTaskStatus = catchAsync(async (req, res) => {
+  const id = req.params.taskId;
+  const result = await taskServices.updateTaskStatus(req.body, id);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    data: result,
+  });
+});
+
 export const taskControllers = {
   assignTask,
   getMyTasks,
   getEachTask,
+  updateTaskStatus,
 };

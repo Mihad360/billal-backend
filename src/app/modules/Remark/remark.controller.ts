@@ -24,7 +24,8 @@ const addRemark = catchAsync(async (req, res) => {
 
 const getRemarkByTaskId = catchAsync(async (req, res) => {
   const id = req.params.taskId;
-  const result = await remarkServices.getRemarkByTaskId(id);
+  const user = req.user as JwtPayload;
+  const result = await remarkServices.getRemarkByTaskId(id, user);
 
   sendResponse(res, {
     statusCode: HttpStatus.OK,

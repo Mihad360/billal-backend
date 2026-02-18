@@ -41,6 +41,7 @@ const addCompany = async (payload: ICompany, user: JwtPayload) => {
     userId,
     {
       companyId: company._id,
+      isCompanyAdded: true,
     },
     { new: true },
   );

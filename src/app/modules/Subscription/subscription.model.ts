@@ -57,7 +57,6 @@ const userSubscriptionSchema = new Schema<IUserSubscription>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // 🔥 one active subscription document per user
     },
 
     planId: {

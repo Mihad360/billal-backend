@@ -9,5 +9,15 @@ router.post(
   auth("office_admin"),
   officeAdminControllers.addWorker,
 );
+router.post(
+  "/add-company-user",
+  auth("office_admin"),
+  officeAdminControllers.addCompanyUser,
+);
+router.post(
+  "/reassign-task/:taskId",
+  auth("office_admin"),
+  officeAdminControllers.reassignTask,
+);
 
 export const officeAdminRoutes = router;

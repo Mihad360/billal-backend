@@ -25,6 +25,7 @@ export interface IUser {
   otp?: string;
   expiresAt?: Date;
   isVerified?: boolean;
+  isCompanyAdded: boolean;
   // Subscription (admin-related)
   currentSubscriptionId?: Types.ObjectId | IUserSubscription;
   hasActiveSubscription?: boolean;
