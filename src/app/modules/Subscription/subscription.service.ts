@@ -241,7 +241,7 @@ export const buyPremiumPlan = async (
           status: "active",
           startDate: subscriptionStartDate,
           endDate: subscriptionEndDate,
-          amount: plan.price,
+          amountPaid: plan.price,
           maxProjects: 100, // Adjust based on your premium limits
           maxMembers: 100, // Adjust based on your premium limits
           storageLimit: 500, // Adjust based on your premium limits

@@ -12,6 +12,7 @@ import { officeAdminRoutes } from "../modules/OfficeAdmin/officeadmin.route";
 import { taskRoutes } from "../modules/SiteTask/task.route";
 import { remarkRoutes } from "../modules/Remark/remark.route";
 import { commentRoutes } from "../modules/Comment/comment.route";
+import { adminRoutes } from "../modules/Admin/admin.route";
 
 const router = Router();
 
@@ -67,6 +68,10 @@ const moduleRoutes = [
   {
     path: "/comment",
     route: commentRoutes,
+  },
+  {
+    path: "/admin",
+    route: adminRoutes,
   },
 ];
 
