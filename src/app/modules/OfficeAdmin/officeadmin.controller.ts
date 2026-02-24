@@ -45,8 +45,78 @@ const reassignTask = catchAsync(async (req, res) => {
   });
 });
 
+const getOfficeAdminDashboardStats = catchAsync(async (req, res) => {
+  const year = Number(req.query.year) || new Date().getFullYear();
+  const result = await officeAdminServices.getOfficeAdminDashboardStats(year);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    data: result,
+  });
+});
+
+const getAllEmployees = catchAsync(async (req, res) => {
+  const result = await officeAdminServices.getAllEmployees(req.query);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    meta: result.meta,
+    data: result.result,
+  });
+});
+
+const getAllSites = catchAsync(async (req, res) => {
+  const result = await officeAdminServices.getAllSites(req.query);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    meta: result.meta,
+    data: result.result,
+  });
+});
+
+const getSitesWithAssignedUsers = catchAsync(async (req, res) => {
+  const result = await officeAdminServices.getSitesWithAssignedUsers(req.query);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getSiteAssignedUserTasks = catchAsync(async (req, res) => {
+  const siteId = req.params.siteId;
+  const userId = req.params.userId;
+  const result = await officeAdminServices.getSiteAssignedUserTasks(
+    siteId,
+    userId,
+    req.query,
+  );
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    data: result,
+  });
+});
+
 export const officeAdminControllers = {
   addWorker,
   addCompanyUser,
   reassignTask,
+  getOfficeAdminDashboardStats,
+  getAllEmployees,
+  getAllSites,
+  getSitesWithAssignedUsers,
+  getSiteAssignedUserTasks,
 };

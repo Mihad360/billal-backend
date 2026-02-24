@@ -4,6 +4,27 @@ import { officeAdminControllers } from "./officeadmin.controller";
 
 const router = express.Router();
 
+router.get(
+  "/dashboard-stats",
+  auth("office_admin"),
+  officeAdminControllers.getOfficeAdminDashboardStats,
+);
+router.get(
+  "/employes",
+  auth("office_admin"),
+  officeAdminControllers.getAllEmployees,
+);
+router.get("/sites", auth("office_admin"), officeAdminControllers.getAllSites);
+router.get(
+  "/assigned-sites",
+  auth("office_admin"),
+  officeAdminControllers.getSitesWithAssignedUsers,
+);
+router.get(
+  "/assigned-tasks/:siteId/:userId",
+  auth("office_admin"),
+  officeAdminControllers.getSiteAssignedUserTasks,
+);
 router.post(
   "/add-worker",
   auth("office_admin"),

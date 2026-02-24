@@ -11,6 +11,11 @@ router.get(
 );
 router.get("/companies", auth("admin"), adminControllers.getCompanies);
 router.get(
+  "/user-subscriptions",
+  auth("admin"),
+  adminControllers.getUserSubscriptions,
+);
+router.get(
   "/:companyId/subscription",
   auth("admin"),
   adminControllers.getCompanySubscription,

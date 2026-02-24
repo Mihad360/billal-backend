@@ -173,7 +173,7 @@ const getCompanySubscription = async (companyId: string) => {
   // 3️⃣ Find subscription
   const subscription = await UserSubscriptionModel.findById(
     user.currentSubscriptionId,
-  );
+  ).select("planId startDate endDate");
 
   if (!subscription) {
     throw new AppError(HttpStatus.NOT_FOUND, "Subscription not found");
@@ -191,9 +191,84 @@ const getCompanySubscription = async (companyId: string) => {
   };
 };
 
+const getUserSubscriptions = async (query: Record<string, unknown>) => {
+  const subsQuery = new QueryBuilder(
+    UserSubscriptionModel.find().select(
+      "userId planId subscriptionType status startDate endDate amountPaid",
+    ),
+    query,
+  )
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await subsQuery.modelQuery
+
+    .populate({
+      path: "userId",
+      select: "name email companyId",
+      populate: {
+        path: "companyId",
+        select: "name",
+      },
+    })
+    .populate("planId", "name duration");
+
+  const meta = await subsQuery.countTotal();
+
+  // --- Revenue by Plan Duration ---
+  const revenueAggregation = await UserSubscriptionModel.aggregate([
+    {
+      $match: {
+        subscriptionType: "paid",
+        amountPaid: { $exists: true, $gt: 0 },
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptionplans",
+        localField: "planId",
+        foreignField: "_id",
+        as: "plan",
+      },
+    },
+    { $unwind: "$plan" },
+    {
+      $group: {
+        _id: "$plan.duration", // 30, 180, 365
+        planName: { $first: "$plan.name" },
+        totalRevenue: { $sum: "$amountPaid" },
+        totalSubscriptions: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  // Shape: { "1 Month": { totalRevenue: X, totalSubscriptions: Y }, ... }
+  const revenue: Record<
+    string,
+    { totalRevenue: number; totalSubscriptions: number }
+  > = {};
+
+  revenueAggregation.forEach((item) => {
+    revenue[item.planName] = {
+      totalRevenue: item.totalRevenue,
+      totalSubscriptions: item.totalSubscriptions,
+    };
+  });
+
+  return {
+    data: result,
+    meta,
+    revenue,
+  };
+};
+
 export const adminServices = {
   getDashboardStats,
   getCompanies,
   getUsersUnderCompanyDetails,
   getCompanySubscription,
+  getUserSubscriptions,
 };

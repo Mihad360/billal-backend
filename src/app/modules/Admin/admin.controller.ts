@@ -55,9 +55,21 @@ const getCompanySubscription = catchAsync(async (req, res) => {
   });
 });
 
+const getUserSubscriptions = catchAsync(async (req, res) => {
+  const result = await adminServices.getUserSubscriptions(req.query);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Dashboard stats fetched successfully",
+    data: result,
+  });
+});
+
 export const adminControllers = {
   getDashboardStats,
   getCompanies,
   getUsersUnderCompanyDetails,
   getCompanySubscription,
+  getUserSubscriptions,
 };

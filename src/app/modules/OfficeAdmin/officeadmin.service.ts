@@ -8,6 +8,9 @@ import { sendEmail } from "../../utils/sendEmail";
 import { CompanyModel } from "../Company/company.model";
 import { Types } from "mongoose";
 import { SiteTaskModel } from "../SiteTask/task.model";
+import { SiteModel } from "../Site/site.model";
+import { SiteFileModel } from "../SiteFile/sitefile.model";
+import QueryBuilder from "../../../builder/QueryBuilder";
 
 const addWorker = async (payload: IUser, user: JwtPayload) => {
   // 1️⃣ Check admin existence
@@ -188,8 +191,224 @@ const reassignTask = async (
   return updatedTask;
 };
 
+const getOfficeAdminDashboardStats = async (year?: number) => {
+  const selectedYear = year || new Date().getFullYear();
+  const startDate = new Date(`${selectedYear}-01-01`);
+  const endDate = new Date(`${selectedYear}-12-31`);
+
+  const totalSites = await SiteModel.countDocuments();
+  const totalUsers = await UserModel.countDocuments();
+  const totalProjects = await SiteFileModel.countDocuments();
+
+  const monthlyProjects = await SiteFileModel.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: startDate, $lte: endDate },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  const monthlyData = Array(12).fill(0);
+  monthlyProjects.forEach((item) => {
+    monthlyData[item._id - 1] = item.count;
+  });
+
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  return {
+    year: selectedYear,
+    totalSites,
+    totalUsers,
+    totalProjects,
+    chart: {
+      labels: months,
+      data: monthlyData,
+    },
+  };
+};
+
+const getAllEmployees = async (query: Record<string, unknown>) => {
+  const employeeQuery = new QueryBuilder(
+    UserModel.find().select(
+      "-password -otp -fcmToken -currentSubscriptionId -hasActiveSubscription -expiresAt -passwordChangedAt",
+    ),
+    query,
+  )
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await employeeQuery.modelQuery.populate("companyId", "name");
+
+  const meta = await employeeQuery.countTotal();
+
+  return {
+    result,
+    meta,
+  };
+};
+
+const getAllSites = async (query: Record<string, unknown>) => {
+  const employeeQuery = new QueryBuilder(SiteModel.find(), query)
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const meta = await employeeQuery.countTotal();
+  const result = await employeeQuery.modelQuery;
+
+  return {
+    result,
+    meta,
+  };
+};
+
+const getSitesWithAssignedUsers = async (query: Record<string, unknown>) => {
+  const siteQuery = new QueryBuilder(SiteModel.find(), query)
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const sites = await siteQuery.modelQuery;
+  const meta = await siteQuery.countTotal();
+
+  const siteIds = sites.map((site) => site._id);
+
+  const assignedUsers = await SiteTaskModel.aggregate([
+    {
+      $match: {
+        siteId: { $in: siteIds },
+        assignedTo: { $exists: true, $ne: null },
+      },
+    },
+    {
+      // deduplicate: one user once per site
+      $group: {
+        _id: { siteId: "$siteId", assignedTo: "$assignedTo" },
+      },
+    },
+    {
+      // collect unique users per site
+      $group: {
+        _id: "$_id.siteId",
+        assignedUserId: { $first: "$_id.assignedTo" }, // single user
+        totalAssignedUsers: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "assignedUserId",
+        foreignField: "_id",
+        as: "assignedUser",
+      },
+    },
+    { $unwind: { path: "$assignedUser", preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        _id: 1,
+        totalAssignedUsers: 1,
+        assignedUser: {
+          _id: "$assignedUser._id",
+          name: "$assignedUser.name",
+          email: "$assignedUser.email",
+          profileImage: "$assignedUser.profileImage",
+        },
+      },
+    },
+  ]);
+
+  const assignedMap = new Map(
+    assignedUsers.map((item) => [item._id.toString(), item]),
+  );
+
+  const data = sites.map((site) => {
+    const assigned = assignedMap.get((site._id as Types.ObjectId).toString());
+    return {
+      ...site.toObject(),
+      assignedUser: assigned?.assignedUser || null,
+    };
+  });
+
+  return {
+    data,
+    meta,
+  };
+};
+
+const getSiteAssignedUserTasks = async (
+  siteId: string,
+  userId: string,
+  query: Record<string, unknown>,
+) => {
+  const site = await SiteModel.findById(siteId);
+  if (!site) {
+    throw new AppError(HttpStatus.NOT_FOUND, "Site not found");
+  }
+
+  const user = await UserModel.findById(userId).select(
+    "-password -otp -fcmToken -currentSubscriptionId -hasActiveSubscription -expiresAt -passwordChangedAt",
+  );
+  if (!user) {
+    throw new AppError(HttpStatus.NOT_FOUND, "User not found");
+  }
+
+  const taskQuery = new QueryBuilder(
+    SiteTaskModel.find({
+      siteId: new Types.ObjectId(siteId),
+      assignedTo: new Types.ObjectId(userId),
+    }),
+    query,
+  )
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await taskQuery.modelQuery
+    .populate("fileId", "name fileUrl")
+    .populate("assignedTo", "name email profileImage")
+    .populate("assignedBy", "name email profileImage");
+
+  const meta = await taskQuery.countTotal();
+
+  return {
+    meta,
+    user,
+    result,
+  };
+};
+
 export const officeAdminServices = {
   addWorker,
   addCompanyUser,
   reassignTask,
+  getOfficeAdminDashboardStats,
+  getAllEmployees,
+  getAllSites,
+  getSitesWithAssignedUsers,
+  getSiteAssignedUserTasks,
 };
