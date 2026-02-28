@@ -13,24 +13,6 @@ const SiteTaskSchema = new Schema<ISiteTask>(
       ref: "SiteFile",
       required: true,
     },
-    pinLocation: {
-      x: {
-        type: Number,
-        required: true,
-        min: 0,
-        max: 100, // Percentage
-      },
-      y: {
-        type: Number,
-        required: true,
-        min: 0,
-        max: 100, // Percentage
-      },
-      pageNumber: {
-        type: Number,
-        min: 1,
-      },
-    },
     title: {
       type: String,
       required: true,

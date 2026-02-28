@@ -40,35 +40,47 @@ const assignTask = async (
   }
 
   // 4. Upload attachments to Cloudinary if any files provided
+  // 4. Upload attachments
   const imageUrls: string[] = [];
+  let documentUrl: string | null = null;
+
   if (files && files.length > 0) {
-    for (const file of files) {
+    for (const item of files) {
       const uploadResult = await sendFileToCloudinary(
-        file.buffer,
-        `task-${Date.now()}-${file.originalname}`,
-        file.mimetype,
+        item.buffer,
+        `task-${Date.now()}-${item.originalname}`,
+        item.mimetype,
       );
-      imageUrls.push(uploadResult.secure_url);
+
+      // 🟢 If image
+      if (item.mimetype.startsWith("image/")) {
+        imageUrls.push(uploadResult.secure_url);
+      }
+
+      // 🔵 If PDF
+      else if (item.mimetype === "application/pdf") {
+        documentUrl = uploadResult.secure_url;
+      }
     }
   }
 
-  // 5. Create the task
+  if (documentUrl) {
+    await SiteFileModel.findByIdAndUpdate(fileId, {
+      fileUrl: documentUrl,
+    });
+  }
+
   const taskData: Partial<ISiteTask> = {
     siteId: site._id,
     fileId: new Types.ObjectId(fileId),
-    pinLocation: {
-      x: payload.pinLocation.x,
-      y: payload.pinLocation.y,
-      pageNumber: payload.pinLocation.pageNumber,
-    },
     title: payload.title,
     description: payload.description,
     assignedTo: payload.assignedTo,
-    assignedBy: new Types.ObjectId(user.user), // From JWT
+    assignedBy: new Types.ObjectId(user.user),
     assignedAt: new Date(),
     status: "To-Do",
     dueDate: payload.dueDate,
-    images: imageUrls,
+    images: imageUrls, // only images go here
   };
 
   const newTask = await SiteTaskModel.create(taskData);

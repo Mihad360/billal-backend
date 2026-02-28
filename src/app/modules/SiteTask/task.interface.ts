@@ -5,13 +5,6 @@ export interface ISiteTask {
   siteId: Types.ObjectId;
   fileId: Types.ObjectId; // Which file this pin is on
 
-  // Pin location on the file
-  pinLocation: {
-    x: number; // X coordinate (percentage or pixel)
-    y: number; // Y coordinate (percentage or pixel)
-    pageNumber?: number; // For multi-page PDFs
-  };
-
   // Task details
   title: string;
   description?: string;

@@ -65,6 +65,7 @@ const verifyOtp = catchAsync(async (req, res) => {
 });
 
 const resendOtp = catchAsync(async (req, res) => {
+  console.log("resend otp");
   const email = req.params.email;
   const result = await authServices.resendOtp(email);
 

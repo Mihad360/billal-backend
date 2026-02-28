@@ -13,13 +13,21 @@ const dummyTerms = {
   description: "dummy terms and conditions",
 };
 const admin = {
-  email: "admin@gmail.com",
+  email: "admin2@yopmail.com",
   password: "123456",
   role: "admin",
   isVerified: true,
   // profilePhotoUrl:
   //   "https://res.cloudinary.com/dmzmx97wn/image/upload/v1754835427/IMG-20250331-WA0261.jpg",
 };
+// const admin = {
+//   email: "admin@gmail.com",
+//   password: "123456",
+//   role: "admin",
+//   isVerified: true,
+//   // profilePhotoUrl:
+//   //   "https://res.cloudinary.com/dmzmx97wn/image/upload/v1754835427/IMG-20250331-WA0261.jpg",
+// };
 
 export const seedSuperAdmin = async () => {
   try {
