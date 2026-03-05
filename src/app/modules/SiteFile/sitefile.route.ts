@@ -10,6 +10,7 @@ router.get(
   auth("office_admin", "worker"),
   siteFileControllers.getSiteFiles,
 );
+router.get("/view/:fileId", siteFileControllers.getEachFile);
 router.post(
   "/upload",
   auth("office_admin"),

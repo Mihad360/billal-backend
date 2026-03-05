@@ -17,25 +17,6 @@ const getDashboardStats = async (year?: number) => {
   const startDate = new Date(`${selectedYear}-01-01`);
   const endDate = new Date(`${selectedYear}-12-31`);
 
-  // 1️⃣ Total Earnings
-  const totalEarningsResult = await UserSubscriptionModel.aggregate([
-    {
-      $match: {
-        subscriptionType: "paid",
-        amountPaid: { $exists: true },
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        total: { $sum: "$amountPaid" },
-      },
-    },
-  ]);
-
-  const totalEarnings = totalEarningsResult[0]?.total || 0;
-
-  // 2️⃣ Monthly Earnings
   const monthlyEarnings = await UserSubscriptionModel.aggregate([
     {
       $match: {
@@ -52,12 +33,6 @@ const getDashboardStats = async (year?: number) => {
     { $sort: { _id: 1 } },
   ]);
 
-  const monthlyData = Array(12).fill(0);
-
-  monthlyEarnings.forEach((item) => {
-    monthlyData[item._id - 1] = item.total;
-  });
-
   const months = [
     "Jan",
     "Feb",
@@ -73,6 +48,23 @@ const getDashboardStats = async (year?: number) => {
     "Dec",
   ];
 
+  // Create base array with 0 values
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const formattedMonthlyData = months.map((month, index) => ({
+    month,
+    amount: 0,
+  }));
+
+  // Fill actual values
+  monthlyEarnings.forEach((item) => {
+    formattedMonthlyData[item._id - 1].amount = item.total;
+  });
+
+  const totalEarnings = formattedMonthlyData.reduce(
+    (sum, item) => sum + item.amount,
+    0,
+  );
+
   const totalUsers = await UserModel.countDocuments();
   const totalCompanies = await CompanyModel.countDocuments();
 
@@ -81,10 +73,7 @@ const getDashboardStats = async (year?: number) => {
     totalEarnings,
     totalUsers,
     totalCompanies,
-    chart: {
-      labels: months,
-      data: monthlyData,
-    },
+    monthlyStats: formattedMonthlyData,
   };
 };
 
@@ -166,7 +155,7 @@ const getCompanySubscription = async (companyId: string) => {
     throw new AppError(HttpStatus.NOT_FOUND, "Company owner not found");
   }
 
-  if (!user.currentSubscriptionId) {
+  if (!user.hasActiveSubscription) {
     throw new AppError(HttpStatus.NOT_FOUND, "Company has no subscription now");
   }
 
@@ -198,6 +187,12 @@ const getUserSubscriptions = async (query: Record<string, unknown>) => {
     ),
     query,
   )
+    .search([
+      "planId.name",
+      "subscriptionType",
+      "status",
+      "userId.companyId.name",
+    ])
     .filter()
     .sort()
     .paginate()
@@ -210,7 +205,7 @@ const getUserSubscriptions = async (query: Record<string, unknown>) => {
       select: "name email companyId",
       populate: {
         path: "companyId",
-        select: "name",
+        select: "name workType",
       },
     })
     .populate("planId", "name duration");

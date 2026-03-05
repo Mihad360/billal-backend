@@ -283,21 +283,22 @@ const verifyOtp = async (payload: { email: string; otp: string }) => {
 
   const check = await checkOtp(payload.email, payload.otp);
 
-  if (check) {
-    const jwtPayload: JwtPayload = {
-      user: check._id,
-      email: check.email,
-      role: check.role,
-    };
-
-    const accessToken = createToken(
-      jwtPayload,
-      config.JWT_SECRET_KEY as string,
-      "3m",
-    );
-
-    return { role: check.role, accessToken, email: check.email };
+  if (!check) {
+    throw new AppError(HttpStatus.BAD_REQUEST, "OTP verification failed");
   }
+
+  const jwtPayload: JwtPayload = {
+    user: check._id,
+    email: check.email,
+    role: check.role,
+  };
+  const accessToken = createToken(
+    jwtPayload,
+    config.JWT_SECRET_KEY as string,
+    "3m",
+  );
+
+  return { role: check.role, accessToken, email: check.email };
 };
 
 const resetPassword = async (

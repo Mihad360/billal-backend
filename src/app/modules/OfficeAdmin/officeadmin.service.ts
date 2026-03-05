@@ -196,29 +196,27 @@ const getOfficeAdminDashboardStats = async (year?: number) => {
   const startDate = new Date(`${selectedYear}-01-01`);
   const endDate = new Date(`${selectedYear}-12-31`);
 
-  const totalSites = await SiteModel.countDocuments();
-  const totalUsers = await UserModel.countDocuments();
-  const totalProjects = await SiteFileModel.countDocuments();
-
-  const monthlyProjects = await SiteFileModel.aggregate([
-    {
-      $match: {
-        createdAt: { $gte: startDate, $lte: endDate },
-      },
-    },
-    {
-      $group: {
-        _id: { $month: "$createdAt" },
-        count: { $sum: 1 },
-      },
-    },
-    { $sort: { _id: 1 } },
-  ]);
-
-  const monthlyData = Array(12).fill(0);
-  monthlyProjects.forEach((item) => {
-    monthlyData[item._id - 1] = item.count;
-  });
+  // Run independent queries in parallel (better performance)
+  const [totalSites, totalUsers, totalProjects, monthlyProjects] =
+    await Promise.all([
+      SiteModel.countDocuments(),
+      UserModel.countDocuments(),
+      SiteFileModel.countDocuments(),
+      SiteFileModel.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate, $lte: endDate },
+          },
+        },
+        {
+          $group: {
+            _id: { $month: "$createdAt" },
+            total: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
 
   const months = [
     "Jan",
@@ -235,15 +233,23 @@ const getOfficeAdminDashboardStats = async (year?: number) => {
     "Dec",
   ];
 
+  // Base structure with 0 values
+  const formattedMonthlyData = months.map((month) => ({
+    month,
+    amount: 0,
+  }));
+
+  // Fill actual data
+  monthlyProjects.forEach((item) => {
+    formattedMonthlyData[item._id - 1].amount = item.total;
+  });
+
   return {
     year: selectedYear,
     totalSites,
     totalUsers,
     totalProjects,
-    chart: {
-      labels: months,
-      data: monthlyData,
-    },
+    monthlyStats: formattedMonthlyData,
   };
 };
 
@@ -335,6 +341,7 @@ const getSitesWithAssignedUsers = async (query: Record<string, unknown>) => {
           _id: "$assignedUser._id",
           name: "$assignedUser.name",
           email: "$assignedUser.email",
+          role: "$assignedUser.role",
           profileImage: "$assignedUser.profileImage",
         },
       },
@@ -389,9 +396,10 @@ const getSiteAssignedUserTasks = async (
     .fields();
 
   const result = await taskQuery.modelQuery
-    .populate("fileId", "name fileUrl")
+    .populate("fileId", "name fileName fileUrl")
     .populate("assignedTo", "name email profileImage")
-    .populate("assignedBy", "name email profileImage");
+    .populate("assignedBy", "name email profileImage")
+    .populate("siteId", "location");
 
   const meta = await taskQuery.countTotal();
 

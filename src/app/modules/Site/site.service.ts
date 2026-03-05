@@ -1,5 +1,5 @@
 import HttpStatus from "http-status";
-import { ISite } from "./site.interface";
+import { ISite, ISiteInput } from "./site.interface";
 import { SiteModel } from "./site.model";
 import AppError from "../../erros/AppError";
 import { sendFileToCloudinary } from "../../utils/sendImageToCloudinary";
@@ -8,31 +8,32 @@ import QueryBuilder from "../../../builder/QueryBuilder";
 import { CompanyModel } from "../Company/company.model";
 import { JwtPayload } from "../../interface/global";
 import { SiteTaskModel } from "../SiteTask/task.model";
+import { getAddressFromCoordinates } from "./site.utils";
 
-const addSite = async (files: Express.Multer.File[], payload: ISite) => {
+const addSite = async (files: Express.Multer.File[], payload: ISiteInput) => {
   const isOfficeAdminExist = await UserModel.findById(payload.createdBy);
   if (!isOfficeAdminExist) {
     throw new AppError(HttpStatus.NOT_FOUND, "Office admin not found");
   }
+
   const company = await CompanyModel.findById(isOfficeAdminExist.companyId);
   if (!company) {
     throw new AppError(HttpStatus.BAD_REQUEST, "company not found");
   }
+
   const endDate = new Date(payload.endDate);
   const currentDate = new Date();
 
-  // Optional: Validate that endDate is in the future
   if (endDate < currentDate) {
     throw new AppError(
       HttpStatus.BAD_REQUEST,
       "Site deadline must be in the future",
     );
   }
-  // Handle photo uploads
+
   let photoUrls: string[] = [];
 
   if (files && files.length > 0) {
-    // Validate file types (only images)
     const invalidFiles = files.filter(
       (file) => !file.mimetype.startsWith("image/"),
     );
@@ -43,7 +44,6 @@ const addSite = async (files: Express.Multer.File[], payload: ISite) => {
       );
     }
 
-    // Upload files to Cloudinary
     const uploadPromises = files.map((file) =>
       sendFileToCloudinary(file.buffer, file.originalname, file.mimetype),
     );
@@ -60,7 +60,10 @@ const addSite = async (files: Express.Multer.File[], payload: ISite) => {
     }
   }
 
-  // Prepare site data
+  // lat & lng come from payload directly (frontend sends { lat, lng })
+  const { lat, lng } = payload.location.coordinates;
+  const address = await getAddressFromCoordinates(lat, lng);
+  
   const siteData: Partial<ISite> = {
     createdBy: isOfficeAdminExist._id,
     companyId: company._id,
@@ -68,10 +71,10 @@ const addSite = async (files: Express.Multer.File[], payload: ISite) => {
     siteTitle: payload.siteTitle.trim(),
     buildingType: payload.buildingType,
     location: {
-      address: payload.location.address.trim(),
+      address, // ✅ auto-resolved from Google Maps
       coordinates: {
-        lat: payload.location.coordinates.lat,
-        lng: payload.location.coordinates.lng,
+        type: "Point",
+        coordinates: [lng, lat], // ✅ GeoJSON: lng first, lat second
       },
     },
     status: payload.status || "To-Do",
@@ -79,14 +82,12 @@ const addSite = async (files: Express.Multer.File[], payload: ISite) => {
     photos: photoUrls,
   };
 
-  // Create site in database
   const newSite = await SiteModel.create(siteData);
   return newSite;
 };
 
 const getSites = async (user: JwtPayload, query: Record<string, unknown>) => {
   const isUserExist = await UserModel.findById(user.user);
-
   if (!isUserExist) {
     throw new AppError(HttpStatus.NOT_FOUND, "User not found");
   }
@@ -103,7 +104,6 @@ const getSites = async (user: JwtPayload, query: Record<string, unknown>) => {
 
     const meta = await siteQuery.countTotal();
     const result = await siteQuery.modelQuery;
-
     return { meta, result };
   }
 

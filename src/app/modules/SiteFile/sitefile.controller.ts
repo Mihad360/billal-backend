@@ -37,7 +37,20 @@ const getSiteFiles = catchAsync(async (req, res) => {
   });
 });
 
+const getEachFile = catchAsync(async (req, res) => {
+  const fileId = req.params.fileId;
+  const result = await siteFileServices.getEachFile(fileId);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    data: result,
+  });
+});
+
 export const siteFileControllers = {
   uploadFiles,
   getSiteFiles,
+  getEachFile,
 };

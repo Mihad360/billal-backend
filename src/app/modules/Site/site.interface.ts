@@ -15,10 +15,10 @@ export interface ISite {
     | "Infrastructure"
     | "Other";
   location: {
-    address: string;
+    address?: string;
     coordinates: {
-      lat: number;
-      lng: number;
+      type: "Point";
+      coordinates: [number, number]; // [lng, lat]
     };
   };
   status: "To-Do" | "In-Progress" | "Done";
@@ -30,4 +30,15 @@ export interface ISite {
   updatedAt: Date;
   completedAt?: Date;
   isDeleted: boolean;
+}
+
+// Separate input type for what frontend sends
+export interface ISiteInput extends Omit<ISite, "location"> {
+  location: {
+    address?: string;
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+  };
 }

@@ -133,10 +133,16 @@ const getMyTasks = async (user: JwtPayload, query: Record<string, unknown>) => {
 };
 
 const getEachTask = async (taskId: string) => {
-  const result = await SiteTaskModel.findById(taskId);
+  const result = await SiteTaskModel.findById(taskId)
+    .populate("siteId", "photos siteTitle")
+    .populate("fileId", "fileUrl fileName")
+    .populate("assignedTo", "name email role")
+    .populate("assignedBy", "name email role");
+
   if (!result) {
     throw new AppError(HttpStatus.NOT_FOUND, "Task not found");
   }
+
   return result;
 };
 

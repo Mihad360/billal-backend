@@ -4,6 +4,7 @@ import { subscriptionControllers } from "./subscription.controller";
 
 const router = express.Router();
 
+router.get("/plans", auth("admin"), subscriptionControllers.getPlans);
 router.post(
   "/free-plan",
   auth("office_admin"),

@@ -17,12 +17,12 @@ const auth = (...requiredRoles: TUserRole[]) => {
         "No token provided or bad format",
       );
     }
-
     // 2. Extract token from header
     const token = headerToken.split(" ")[1];
     if (!token) {
       throw new AppError(HttpStatus.UNAUTHORIZED, "You are not authorized");
     }
+    // console.log(token);
 
     // 3. Verify token and get decoded payload
     let decoded: JwtPayload;

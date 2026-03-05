@@ -32,6 +32,8 @@ const config = {
 
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+
+  GOOGLE_MAP_API_KEY: process.env.GOOGLE_MAP_API_KEY,
 } as const;
 
 export default config;

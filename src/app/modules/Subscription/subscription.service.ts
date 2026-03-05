@@ -12,6 +12,7 @@ import {
   confirmPayment,
   createPaymentIntent,
 } from "../Payment/payment.service";
+import QueryBuilder from "../../../builder/QueryBuilder";
 
 const createSubscriptionPlan = async (payload: ISubscriptionPlan) => {
   /* ------------------ Check if plan already exists ------------------ */
@@ -40,6 +41,16 @@ const createSubscriptionPlan = async (payload: ISubscriptionPlan) => {
     plan: newPlan,
     message: "Subscription plan created successfully",
   };
+};
+
+const getPlans = async (query: Record<string, unknown>) => {
+  const planQuery = new QueryBuilder(SubscriptionPlanModel.find(), query)
+    .filter()
+    .paginate()
+    .fields();
+  const meta = await planQuery.countTotal();
+  const result = await planQuery.modelQuery;
+  return { meta, result };
 };
 
 const freeTrialPlan = async (user: JwtPayload) => {
@@ -313,4 +324,5 @@ export const subscriptionServices = {
   createSubscriptionPlan,
   freeTrialPlan,
   createPayment,
+  getPlans,
 };

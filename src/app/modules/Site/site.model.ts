@@ -12,14 +12,8 @@ const SiteSchema = new Schema<ISite>(
       type: Schema.Types.ObjectId,
       ref: "Company",
     },
-    siteOwner: {
-      type: String,
-      required: true,
-    },
-    siteTitle: {
-      type: String,
-      required: true,
-    },
+    siteOwner: { type: String, required: true },
+    siteTitle: { type: String, required: true },
     buildingType: {
       type: String,
       enum: [
@@ -33,18 +27,15 @@ const SiteSchema = new Schema<ISite>(
       required: true,
     },
     location: {
-      address: {
-        type: String,
-        required: true,
-        trim: true,
-      },
+      address: { type: String, trim: true },
       coordinates: {
-        lat: {
-          type: Number,
-          required: true,
+        type: {
+          type: String,
+          enum: ["Point"],
+          default: "Point",
         },
-        lng: {
-          type: Number,
+        coordinates: {
+          type: [Number], // [lng, lat]
           required: true,
         },
       },
@@ -55,36 +46,16 @@ const SiteSchema = new Schema<ISite>(
       default: "To-Do",
       required: true,
     },
-    officeAdminRemarks: {
-      type: String,
-      trim: true,
-    },
-    completionDescription: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    photos: {
-      type: [String],
-      default: [],
-    },
-    endDate: {
-      type: Date,
-    },
-    completedAt: {
-      type: Date,
-    },
-    isDeleted: {
-      type: Boolean,
-      default: false,
-    },
+    officeAdminRemarks: { type: String, trim: true },
+    completionDescription: { type: String, trim: true, default: "" },
+    photos: { type: [String], default: [] },
+    endDate: { type: Date },
+    completedAt: { type: Date },
+    isDeleted: { type: Boolean, default: false },
   },
-  {
-    timestamps: true, // Automatically adds createdAt and updatedAt
-  },
+  { timestamps: true },
 );
 
-// Index for geospatial queries (optional but recommended)
 SiteSchema.index({ "location.coordinates": "2dsphere" });
 
 export const SiteModel = model<ISite>("Site", SiteSchema);

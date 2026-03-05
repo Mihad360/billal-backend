@@ -167,7 +167,23 @@ const getSiteFiles = async (
   throw new AppError(HttpStatus.FORBIDDEN, "Unauthorized access");
 };
 
+const getEachFile = async (fileId: string) => {
+  const isFileExist = await SiteFileModel.findOne({
+    _id: fileId,
+    isDeleted: false,
+  })
+    .populate("uploadedBy", "name email")
+    .populate("siteId", "siteTitle siteOwner buildingType photos status");
+
+  if (!isFileExist) {
+    throw new AppError(HttpStatus.NOT_FOUND, "File not found");
+  }
+
+  return isFileExist;
+};
+
 export const siteFileServices = {
   uploadFiles,
   getSiteFiles,
+  getEachFile,
 };

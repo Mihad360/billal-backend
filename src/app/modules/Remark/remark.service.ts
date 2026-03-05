@@ -18,7 +18,6 @@ const addRemark = async (
   const userId = new Types.ObjectId(user.user);
   const { description } = payload;
 
-  // ✅ Validation 1: At least description OR images must be provided
   if (!description && (!files || files.length === 0)) {
     throw new AppError(
       HttpStatus.BAD_REQUEST,
@@ -31,13 +30,11 @@ const addRemark = async (
     throw new AppError(HttpStatus.NOT_FOUND, "User not found");
   }
 
-  // ✅ Validation 2: Check if task exists
   const task = await SiteTaskModel.findById(taskId);
   if (!task) {
     throw new AppError(HttpStatus.NOT_FOUND, "Task not found");
   }
 
-  // ✅ Validation 3: Task must be in "Done" or "Remark" status to add remarks
   if (!["Done", "Remark"].includes(task.status)) {
     throw new AppError(
       HttpStatus.BAD_REQUEST,
@@ -45,7 +42,6 @@ const addRemark = async (
     );
   }
 
-  // ✅ Validation 4: Image count limit
   if (files && files.length > 5) {
     throw new AppError(
       HttpStatus.BAD_REQUEST,
@@ -53,22 +49,18 @@ const addRemark = async (
     );
   }
 
-  // ✅ Validation 5: Office admin and worker can only remark once per task
-  const restrictedRoles = ["office_admin", "worker"]; // 🔧 adjust role names to match your system
+  // ✅ Check if this user already has a history entry (for restricted roles)
+  const restrictedRoles = ["office_admin", "worker"];
+  let isUpdate = false;
+
   if (restrictedRoles.includes(isUserExist.role)) {
     const existingRemark = await SiteTaskRemarkModel.findOne({ taskId });
-
     if (existingRemark) {
-      const alreadyRemarked = existingRemark?.history?.some(
-        (entry) => entry.remarkedBy.toString() === userId.toString(),
-      );
-
-      if (alreadyRemarked) {
-        throw new AppError(
-          HttpStatus.BAD_REQUEST,
-          "You have already added a remark for this task. Only one remark is allowed.",
-        );
-      }
+      isUpdate =
+        existingRemark.history?.some(
+          (entry) => entry.remarkedBy.toString() === userId.toString(),
+        ) ?? false;
+      // No error thrown — we allow the update
     }
   }
 
@@ -90,20 +82,10 @@ const addRemark = async (
     }
   }
 
-  // ✅ Start MongoDB transaction
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const historyEntry = {
-      remarkedBy: isUserExist._id,
-      userRole: isUserExist.role,
-      description: description || "",
-      images: imageUrls,
-      remarkedAt: new Date(),
-      statusAtTime: task.status,
-    };
-
     const existingRemark = await SiteTaskRemarkModel.findOne({
       taskId,
     }).session(session);
@@ -111,27 +93,73 @@ const addRemark = async (
     let result;
 
     if (existingRemark) {
-      // ✅ Update top-level fields + push new history entry
-      const updatedRemark = await SiteTaskRemarkModel.findOneAndUpdate(
-        { taskId },
-        {
+      let updateQuery: Record<string, any>;
+
+      if (isUpdate) {
+        // ✅ User already remarked — update their existing history entry in-place
+        updateQuery = {
           lastRemarkedBy: isUserExist._id,
           lastRemarkedRole: isUserExist.role,
           lastRemarkedAt: new Date(),
           description: description || existingRemark.description,
           images: imageUrls.length > 0 ? imageUrls : existingRemark.images,
-          $push: {
-            history: historyEntry,
+          $set: {
+            "history.$[entry].description": description || "",
+            "history.$[entry].images":
+              imageUrls.length > 0 ? imageUrls : undefined,
+            "history.$[entry].remarkedAt": new Date(),
           },
-        },
-        { new: true, runValidators: true, session },
-      )
-        .populate("lastRemarkedBy", "name email profileImage")
-        .populate("history.remarkedBy", "name email profileImage");
+        };
 
-      result = updatedRemark;
+        result = await SiteTaskRemarkModel.findOneAndUpdate(
+          { taskId },
+          updateQuery,
+          {
+            new: true,
+            runValidators: true,
+            session,
+            arrayFilters: [{ "entry.remarkedBy": userId }], // targets only their entry
+          },
+        )
+          .populate("lastRemarkedBy", "name email profileImage")
+          .populate("history.remarkedBy", "name email profileImage");
+      } else {
+        // ✅ Different user — push a new history entry
+        const historyEntry = {
+          remarkedBy: isUserExist._id,
+          userRole: isUserExist.role,
+          description: description || "",
+          images: imageUrls,
+          remarkedAt: new Date(),
+          statusAtTime: task.status,
+        };
+
+        result = await SiteTaskRemarkModel.findOneAndUpdate(
+          { taskId },
+          {
+            lastRemarkedBy: isUserExist._id,
+            lastRemarkedRole: isUserExist.role,
+            lastRemarkedAt: new Date(),
+            description: description || existingRemark.description,
+            images: imageUrls.length > 0 ? imageUrls : existingRemark.images,
+            $push: { history: historyEntry },
+          },
+          { new: true, runValidators: true, session },
+        )
+          .populate("lastRemarkedBy", "name email profileImage")
+          .populate("history.remarkedBy", "name email profileImage");
+      }
     } else {
-      // ✅ Create new remark document for this task
+      // ✅ No remark doc yet — create fresh
+      const historyEntry = {
+        remarkedBy: isUserExist._id,
+        userRole: isUserExist.role,
+        description: description || "",
+        images: imageUrls,
+        remarkedAt: new Date(),
+        statusAtTime: task.status,
+      };
+
       const [newRemark] = await SiteTaskRemarkModel.create(
         [
           {
@@ -149,12 +177,10 @@ const addRemark = async (
         { session },
       );
 
-      const populatedRemark = await SiteTaskRemarkModel.findById(newRemark._id)
+      result = await SiteTaskRemarkModel.findById(newRemark._id)
         .session(session)
         .populate("lastRemarkedBy", "name email profileImage")
         .populate("history.remarkedBy", "name email profileImage");
-
-      result = populatedRemark;
     }
 
     await session.commitTransaction();

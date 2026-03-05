@@ -40,11 +40,23 @@ const createPayment = catchAsync(async (req, res) => {
     success: true,
     message: "Password reset OTP sent to email",
     data: result,
-  });  
+  });
+});
+
+const getPlans = catchAsync(async (req, res) => {
+  const result = await subscriptionServices.getPlans(req.query);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    data: result,
+  });
 });
 
 export const subscriptionControllers = {
   freeTrialPlan,
   createSubscriptionPlan,
   createPayment,
+  getPlans,
 };
