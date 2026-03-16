@@ -10,12 +10,19 @@ import { privacyControllers } from "./app/modules/Settings/privacy/Privacy.contr
 import { logHttpRequests } from "./logger/logger";
 import bodyParser from "body-parser";
 import { stripeWebhookHandler } from "./app/utils/stripe/stripeWebhookHandler";
+import { revenuecatWebhookHandler } from "./app/utils/revenueCat/revenuecatWebhookHandler";
 const app: Application = express();
 
 app.post(
   "/stripe/webhook",
   bodyParser.raw({ type: "application/json" }),
   stripeWebhookHandler,
+);
+// should match your URL exactly
+app.post(
+  "/revenuecat-webhook/billal", // ← must match dashboard URL
+  express.raw({ type: "application/json" }),
+  revenuecatWebhookHandler,
 );
 
 app.use(logHttpRequests);

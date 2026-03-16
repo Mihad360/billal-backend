@@ -13,6 +13,7 @@ import { taskRoutes } from "../modules/SiteTask/task.route";
 import { remarkRoutes } from "../modules/Remark/remark.route";
 import { commentRoutes } from "../modules/Comment/comment.route";
 import { adminRoutes } from "../modules/Admin/admin.route";
+import { NotificationRoutes } from "../modules/Notification/notification.route";
 
 const router = Router();
 
@@ -72,6 +73,10 @@ const moduleRoutes = [
   {
     path: "/admin",
     route: adminRoutes,
+  },
+  {
+    path: "/notification",
+    route: NotificationRoutes,
   },
 ];
 

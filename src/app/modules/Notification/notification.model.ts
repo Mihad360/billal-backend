@@ -7,7 +7,14 @@ const notificationSchema = new Schema<INotification>(
     recipient: { type: Schema.Types.ObjectId, ref: "User", default: null }, // Admin or recipient reference
     type: {
       type: String,
-      enum: ["user_registration", "user_login", "user_join", "message"],
+      enum: [
+        "user_registration",
+        "user_login",
+        "user_join",
+        "message",
+        "task_assigned",
+        "task_updated",
+      ],
     },
     message: { type: String, required: true },
     isRead: { type: Boolean, default: false },

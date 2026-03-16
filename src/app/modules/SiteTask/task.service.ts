@@ -9,6 +9,8 @@ import { SiteModel } from "../Site/site.model";
 import AppError from "../../erros/AppError";
 import QueryBuilder from "../../../builder/QueryBuilder";
 import { sendFileToCloudinary } from "../../utils/sendImageToCloudinary";
+import { NotificationModel } from "../Notification/notification.model";
+import { sendPushNotifications } from "../../utils/firebase/notification";
 
 const assignTask = async (
   user: JwtPayload,
@@ -39,7 +41,6 @@ const assignTask = async (
     throw new AppError(HttpStatus.NOT_FOUND, "Assigned worker not found");
   }
 
-  // 4. Upload attachments to Cloudinary if any files provided
   // 4. Upload attachments
   const imageUrls: string[] = [];
   let documentUrl: string | null = null;
@@ -52,48 +53,110 @@ const assignTask = async (
         item.mimetype,
       );
 
-      // 🟢 If image
       if (item.mimetype.startsWith("image/")) {
         imageUrls.push(uploadResult.secure_url);
-      }
-
-      // 🔵 If PDF
-      else if (item.mimetype === "application/pdf") {
+      } else if (item.mimetype === "application/pdf") {
         documentUrl = uploadResult.secure_url;
       }
     }
   }
 
   if (documentUrl) {
-    await SiteFileModel.findByIdAndUpdate(fileId, {
-      fileUrl: documentUrl,
-    });
+    await SiteFileModel.findByIdAndUpdate(fileId, { fileUrl: documentUrl });
   }
 
-  const taskData: Partial<ISiteTask> = {
-    siteId: site._id,
-    fileId: new Types.ObjectId(fileId),
-    title: payload.title,
-    description: payload.description,
-    assignedTo: payload.assignedTo,
-    assignedBy: new Types.ObjectId(user.user),
-    assignedAt: new Date(),
-    status: "To-Do",
-    dueDate: payload.dueDate,
-    images: imageUrls, // only images go here
-  };
+  /**
+   * 🔎 CHECK IF TASK ALREADY EXISTS
+   */
+  let task = await SiteTaskModel.findOne({ fileId });
 
-  const newTask = await SiteTaskModel.create(taskData);
+  let notificationType = "";
+  let notificationTitle = "";
+  let notificationMessage = "";
 
-  // 6. Populate references before returning
-  await newTask.populate([
+  if (task) {
+    /**
+     * 🔄 UPDATE EXISTING TASK (WITHOUT save())
+     */
+    const updateData: Partial<ISiteTask> = {
+      title: payload.title,
+      description: payload.description,
+      assignedTo: payload.assignedTo,
+      dueDate: payload.dueDate,
+    };
+
+    if (imageUrls.length > 0) {
+      updateData.images = imageUrls;
+    }
+
+    task = await SiteTaskModel.findOneAndUpdate(
+      { fileId },
+      { $set: updateData },
+      { new: true },
+    );
+
+    if (!task) {
+      throw new AppError(HttpStatus.NOT_FOUND, "Task not found after update");
+    }
+
+    notificationType = "task_updated";
+    notificationTitle = "Task Updated";
+    notificationMessage = `Your assigned task has been updated: ${payload.title}`;
+  } else {
+    /**
+     * 🆕 CREATE NEW TASK
+     */
+    const taskData: Partial<ISiteTask> = {
+      siteId: site._id,
+      fileId: new Types.ObjectId(fileId),
+      title: payload.title,
+      description: payload.description,
+      assignedTo: payload.assignedTo,
+      assignedBy: new Types.ObjectId(user.user),
+      assignedAt: new Date(),
+      status: "To-Do",
+      dueDate: payload.dueDate,
+      images: imageUrls,
+    };
+
+    task = await SiteTaskModel.create(taskData);
+
+    notificationType = "task_assigned";
+    notificationTitle = "New Task Assigned";
+    notificationMessage = `You have been assigned a new task: ${payload.title}`;
+  }
+
+  // Populate references
+  await task.populate([
     { path: "assignedTo", select: "name email phone" },
     { path: "assignedBy", select: "name email" },
     { path: "siteId", select: "siteTitle location" },
     { path: "fileId", select: "fileName fileUrl fileType" },
   ]);
 
-  return newTask;
+  /**
+   * 🔔 CREATE NOTIFICATION
+   */
+  await NotificationModel.create({
+    sender: new Types.ObjectId(user.user),
+    recipient: worker._id,
+    type: notificationType,
+    title: notificationTitle,
+    message: notificationMessage,
+  });
+
+  /**
+   * 📲 SEND PUSH NOTIFICATION
+   */
+  if (worker.fcmToken && worker.fcmToken.length > 0) {
+    await sendPushNotifications(
+      worker.fcmToken,
+      notificationTitle,
+      notificationMessage,
+    );
+  }
+
+  return task;
 };
 
 const getMyTasks = async (user: JwtPayload, query: Record<string, unknown>) => {
