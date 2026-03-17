@@ -67,143 +67,114 @@ const createUser = async (payload: IUser) => {
 };
 
 const loginUser = async (payload: IAuth) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const user = await UserModel.findOne({
+    email: payload.email,
+  }).select("-passwordChangedAt");
 
-  try {
-    const user = await UserModel.findOne({
-      email: payload.email,
-    })
-      .select("-passwordChangedAt")
-      .session(session);
+  if (!user) {
+    throw new AppError(HttpStatus.NOT_FOUND, "The user is not found");
+  }
 
-    if (!user) {
-      throw new AppError(HttpStatus.NOT_FOUND, "The user is not found");
-    }
+  if (user?.isDeleted) {
+    throw new AppError(HttpStatus.BAD_REQUEST, "The user is blocked");
+  }
 
-    if (user?.isDeleted) {
-      throw new AppError(HttpStatus.BAD_REQUEST, "The user is blocked");
-    }
+  // ✅ Not verified
+  if (!user.isVerified) {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expireAt = new Date(Date.now() + 3 * 60 * 1000);
 
-    if (!user.isVerified) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expireAt = new Date(Date.now() + 3 * 60 * 1000);
+    await UserModel.findByIdAndUpdate(user._id, {
+      otp,
+      expiresAt: expireAt,
+    });
 
-      await UserModel.findByIdAndUpdate(
-        user._id,
-        {
-          otp: otp,
-          expiresAt: expireAt,
-        },
-        { new: true, session },
-      );
-
-      const subject = "Verify your account";
-      await sendEmail(
-        user.email,
-        subject,
-        verificationEmailTemplate(user.email, otp),
-      );
-
-      await session.commitTransaction();
-      session.endSession();
-
-      return {
-        message:
-          "You are not verified. A new verification email has been sent.",
-        user: user,
-      };
-    }
-
-    if (
-      !(await UserModel.compareUserPassword(payload.password, user.password))
-    ) {
-      throw new AppError(HttpStatus.FORBIDDEN, "Password did not match");
-    }
-
-    const userId = user._id;
-
-    if (!userId) {
-      throw new AppError(HttpStatus.NOT_FOUND, "User id is missing");
-    }
-
-    let updateUser: IUser = user;
-
-    if (payload.fcmToken) {
-      updateUser = (await UserModel.findByIdAndUpdate(
-        userId,
-        {
-          $addToSet: { fcmToken: payload.fcmToken },
-        },
-        { new: true, session },
-      )) as IUser;
-    }
-
-    const jwtPayload: JwtPayload = {
-      user: new Types.ObjectId(updateUser?._id),
-      email: updateUser?.email,
-      role: updateUser?.role,
-    };
-
-    const accessToken = createToken(
-      jwtPayload,
-      config.JWT_SECRET_KEY as string,
-      config.JWT_ACCESS_EXPIRES_IN as string,
+    await sendEmail(
+      user.email,
+      "Verify your account",
+      verificationEmailTemplate(user.email, otp),
     );
 
-    if (accessToken) {
-      const notinfo: INotification = {
-        sender: new Types.ObjectId(user._id),
-        type: "user_login",
-        message: `User Logged in: (${user.email})`,
-      };
-      const notInfo = (await createNotification(
-        notinfo,
-        session,
-      )) as Partial<INotification>;
-
-      if (!notInfo) {
-        throw new AppError(
-          HttpStatus.BAD_REQUEST,
-          "Notification create failed",
-        );
-      }
-
-      const admins = await UserModel.find({
-        role: "admin",
-        isVerified: true,
-        fcmToken: { $exists: true, $ne: null },
-      })
-        .select("fcmToken")
-        .session(session);
-
-      const adminTokens: string[] = admins.flatMap(
-        (admin) => admin.fcmToken ?? [],
-      );
-
-      if (adminTokens.length > 0) {
-        await sendPushNotifications(
-          adminTokens,
-          "New User Login",
-          notInfo.message as string,
-        );
-      }
-    }
-
-    await session.commitTransaction();
-    session.endSession();
-
     return {
-      _id: user._id,
-      role: user.role,
-      accessToken,
-      user: updateUser,
+      message: "You are not verified. A new verification email has been sent.",
+      user,
     };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
   }
+
+  // ✅ Password check
+  const isMatch = await UserModel.compareUserPassword(
+    payload.password,
+    user.password,
+  );
+
+  if (!isMatch) {
+    throw new AppError(HttpStatus.FORBIDDEN, "Password did not match");
+  }
+
+  let updateUser: IUser = user;
+
+  // ✅ Save FCM token
+  if (payload.fcmToken) {
+    updateUser = (await UserModel.findByIdAndUpdate(
+      user._id,
+      {
+        $addToSet: { fcmToken: payload.fcmToken },
+      },
+      { new: true },
+    )) as IUser;
+  }
+
+  // ✅ JWT
+  const jwtPayload: JwtPayload = {
+    user: new Types.ObjectId(updateUser._id),
+    email: updateUser.email,
+    role: updateUser.role,
+  };
+
+  const accessToken = createToken(
+    jwtPayload,
+    config.JWT_SECRET_KEY as string,
+    config.JWT_ACCESS_EXPIRES_IN as string,
+  );
+
+  // ✅ Background operations (don’t break login)
+  try {
+    const notinfo: INotification = {
+      sender: new Types.ObjectId(user._id),
+      type: "user_login",
+      message: `User Logged in: (${user.email})`,
+    };
+
+    const notInfo = await createNotification(notinfo);
+
+    const admins = await UserModel.find({
+      role: "admin",
+      isVerified: true,
+      fcmToken: { $exists: true, $ne: null },
+    }).select("fcmToken");
+
+    const adminTokens: string[] = admins.flatMap(
+      (admin) => admin.fcmToken ?? [],
+    );
+
+    if (adminTokens.length > 0) {
+      await sendPushNotifications(
+        adminTokens,
+        "New User Login",
+        notInfo?.message || "",
+      );
+    }
+  } catch (err) {
+    console.error("Notification error:", err);
+    // ❗ Do NOT throw
+  }
+
+  return {
+    _id: user._id,
+    role: user.role,
+    accessToken,
+    user: updateUser,
+  };
 };
 
 const forgetPassword = async (email: string) => {
