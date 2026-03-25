@@ -36,6 +36,16 @@ const getUsers = async (query: Record<string, unknown>) => {
   return { meta, result };
 };
 
+const getEachUser = async (id: string) => {
+  const user = await UserModel.findById(id).select(
+    "-fcmToken -password -otp -expiresAt -isVerified -passwordChangedAt -currentSubscriptionId -hasActiveSubscription",
+  );
+  if (!user) {
+    throw new AppError(HttpStatus.NOT_FOUND, "user not found");
+  }
+  return user;
+};
+
 const editProfile = async (
   id: string,
   file: Express.Multer.File,
@@ -82,4 +92,5 @@ export const userServices = {
   getMe,
   getUsers,
   editProfile,
+  getEachUser,
 };

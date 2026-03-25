@@ -27,6 +27,18 @@ const getUsers = catchAsync(async (req, res) => {
   });
 });
 
+const getEachUser = catchAsync(async (req, res) => {
+  const id = req.params.userId;
+  const result = await userServices.getEachUser(id);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent to email",
+    data: result,
+  });
+});
+
 const editProfile = catchAsync(async (req, res) => {
   const user = req.user as JwtPayload;
   const id = user.user as string;
@@ -45,4 +57,5 @@ export const userControllers = {
   getMe,
   getUsers,
   editProfile,
+  getEachUser,
 };

@@ -11,6 +11,11 @@ router.get(
   auth("admin", "office_admin", "worker"),
   userControllers.getMe,
 );
+router.get(
+  "/view/:userId",
+  auth("admin", "office_admin", "worker"),
+  userControllers.getEachUser,
+);
 router.patch(
   "/edit-profile",
   auth("admin", "office_admin", "worker"),

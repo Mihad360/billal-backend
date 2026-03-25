@@ -20,7 +20,7 @@ app.post(
 );
 // should match your URL exactly
 app.post(
-  "/revenuecat-webhook/billal", // ← must match dashboard URL
+  "/revenuecat-webhook/billal",
   express.raw({ type: "application/json" }),
   revenuecatWebhookHandler,
 );
