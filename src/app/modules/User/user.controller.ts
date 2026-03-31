@@ -28,7 +28,8 @@ const getUsers = catchAsync(async (req, res) => {
 });
 
 const getEachUser = catchAsync(async (req, res) => {
-  const id = req.params.userId;
+  console.log("hit user id");
+  const id = req.params.id;
   const result = await userServices.getEachUser(id);
 
   sendResponse(res, {
